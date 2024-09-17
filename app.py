@@ -4,13 +4,14 @@ import os
 from groq import Groq
 import re
 
-app3 = Flask(__name__)
-CORS(app3, resources={r"/*": {"origins": "http://localhost:5173"}})  # Allow only your frontend
+app = Flask(__name__)
+# CORS(app3, resources={r"/*": {"origins": "http://localhost:5173"}})  # Allow only your frontend
+CORS(app)
 
 groq_api_key = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=groq_api_key)
 
-@app3.route('/analyze_claim', methods=['POST'])
+@app.route('/analyze_claim', methods=['POST'])
 def analyze_claim():
     data = request.json
     claim = data.get('claim')
@@ -101,7 +102,4 @@ def analyze_claim():
     return jsonify({'analysis': analysis_response})
 
 if __name__ == '__main__':
-    app3.run(debug=True, port=5000)
-
-
-
+    app.run(debug=True, port=5000)
