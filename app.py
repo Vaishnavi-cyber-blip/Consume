@@ -6,7 +6,7 @@ import re
 
 app = Flask(__name__)
 # CORS(app3, resources={r"/*": {"origins": "http://localhost:5173"}})  # Allow only your frontend
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "https://friendly-spork-vecd.onrender.com"}})
 
 groq_api_key = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=groq_api_key)
