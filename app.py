@@ -1,15 +1,16 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
-from groq import Groq
 import re
+import google.generativeai as genai
 
 app = Flask(__name__)
-# CORS(app3, resources={r"/*": {"origins": "http://localhost:5173"}})  # Allow only your frontend
 CORS(app, resources={r"/*": {"origins": "https://friendly-spork-2.onrender.com"}})
 
-groq_api_key = os.getenv("GROQ_API_KEY")
-client = Groq(api_key=groq_api_key)
+google_api_key = os.getenv("GOOGLE_API_KEY")
+
+genai.configure(api_key=google_api_key)
+model = genai.GenerativeModel('gemini-pro')
 
 @app.route('/analyze_claim', methods=['POST'])
 def analyze_claim():
@@ -17,59 +18,49 @@ def analyze_claim():
     claim = data.get('claim')
     nutrition_text = data.get('nutritionText')
 
-    # Define the prompt for LLaMA model
     prompt = f"""
-    Compare the following product claim against the extracted text: "{nutrition_text}". 
-    The claim to verify is: "{claim}". 
-    Is the claim accurate? Provide a detailed and interactive analysis using the format below:
+        You are given the following product claim: "{claim}".
+        The product description extracted from its label is: "{nutrition_text}".
 
-    **Example Analysis:**
-    ---
-    **Claim:**
-    This product is 100% organic.
+        ### Instructions:
+        1. Analyze the accuracy of the claim based on the extracted text.
+        2. Provide an in-depth, step-by-step breakdown with facts.
+        3. Ensure the analysis includes:
+            - Claim accuracy check
+            - Ingredient review
+            - Nutritional facts review
+            - Overall observations
+            - Final conclusion with a verdict (Accurate, Partially Accurate, or Inaccurate)
+        4. Use the format given to display the output.
 
-    **🔍 Claim Accuracy:**
-    - The product contains some ingredients that are not certified organic.
-    - The packaging does not specify certification for organic ingredients.
-    - **🟡 Verdict**: This claim is **inaccurate** as not all ingredients are organic.
 
-    **🧪 Ingredient Review:**
-    - No evidence of added sugar in the ingredients list.
-    - Nutritional facts confirm no sugars listed.
-    - **🟢 Verdict**: The product is free from added sugars.
+        **Example Analysis:**
+        ---
+        **Claim:**
+        "{claim}"
 
-    **📊 Nutritional Facts Review:**
-    - The product is low in carbohydrates and fats, supporting the claim of being healthy.
-    - **🟡 Verdict**: The product is healthy but not organic as claimed.
+        **🔍 Claim Accuracy:**
+        - Bullet-pointed facts based on comparison with extracted text.
 
-    **🔍 Overall Observation:**
-    - The product appears to be a processed fruit drink with a combination of fruit concentrates and purees, rather than being made with 100% original fruits.
-    - The added sugar and processing steps do not align with the claim of being 100% pure or natural.
+        **🧪 Ingredient Review:**
+        - Bullet-pointed review of the ingredients.
 
-    **⚖️ Conclusion:**
-    - The claim "Made with 100 percent original fruits" is **inaccurate**.
-    - The product's ingredients and nutritional facts do not support this claim.
-    - The presence of processed fruit concentrates, purees, and added sugar contradicts the idea of it being made with 100% original fruits.
+        **📊 Nutritional Facts Review:**
+        - Bullet-pointed nutritional facts related to the claim.
 
-    Now analyze the claim: "{claim}"
-    ---
-    """
+        **🔍 Overall Observation:**
+        - General summary of findings.
 
-    # Use Groq's API to process the text with the LLaMA model
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "user",
-                "content": prompt,
-            }
-        ],
-        model="llama3-8b-8192",
-        max_tokens=500,
-    )
+        **⚖️ Conclusion:**
+        - Verdict and reasons for the accuracy of the claim.
 
-    # Get the processed analysis from the response
-    analysis_text = chat_completion.choices[0].message.content
-    print("Full analysis_text from LLM:", analysis_text)
+        ### Now analyze the claim: "{claim}"
+        ---
+        """
+
+    response = model.generate_content(prompt)
+    analysis_text = response.text
+    print(analysis_text)
 
     # Now parse the response text to match the sections
     # Using simpler regex patterns to capture content after symbols
